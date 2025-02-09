@@ -5,11 +5,9 @@ Created on Thu Jan  2 13:22:45 2025
 @author: stesc
 """
 
-
-
+#importing all libraries and functions needed
 import pandas as pd
 from pandas import read_excel
-#seminar6
 import scipy.stats as stt
 import fredapi as fa
 from scipy.stats import mode
@@ -27,51 +25,45 @@ from scipy import stats
 from scipy.stats import levene
 from statsmodels.formula.api import ols
 import statsmodels.api as sm
-#seminar6vs2 confidence interval
 import numpy as np
 import scipy as sp
 import scipy.stats
-#seminar7
 from pandas import read_csv
-#seminar8
 from datetime import datetime
-#
 from scipy.stats import chi2_contingency
 from scipy.stats import chisquare
 from scipy.stats import spearmanr
 
 
-#2 op preliminare
-
+#2 Preliminary operations
+#import the data from the CSV file
 sleep_data = read_csv("Sleep_health_and_lifestyle_dataset.csv")
 sleep_data.columns = sleep_data.columns.str.replace(' ', '.', regex=False)
 
-
+#create a new data set with the following conditions
 sleep_quality_check = sleep_data[
     ((sleep_data['Sleep.Duration'] >= 5.0) & (sleep_data['Sleep.Duration'] <= 7.5)) &
     ((sleep_data['Stress.Level'] >= 2) & (sleep_data['Stress.Level'] <= 9)) &
     ((sleep_data['Quality.of.Sleep'] >= 3) & (sleep_data['Quality.of.Sleep'] <= 9))]
 
+#drop the unnecessary columns
 drop_columns = ['Daily.Steps', 'Blood.Pressure']
 sleep_quality_check = sleep_quality_check.drop(columns = drop_columns)
-
+#fill the NA values with the new value 'None'
 sleep_quality_check = sleep_quality_check.fillna({'Sleep.Disorder': 'None'})
 
-#export baza de date
+#create a new CSV file with the data that meet the conditions above
 sleep_quality_check.to_csv('sleep_quality_check.csv', index = False)
 
-#afisarea claselor a tuturor variabilelor din dataframe
-
+#shows the data types for each variable included in the data frame
 print(sleep_quality_check.dtypes)
 
-#modificare var Sleep.Disorder
+#transform the Sleep.Disorder variable to categorical
 sleep_quality_check['Sleep.Disorder'] = pd.Categorical(
     sleep_quality_check['Sleep.Disorder'],
     categories = ['Insomnia', 'None', 'Sleep Apnea'])
 
-#creare variabilei categoriale sleep_disorder_stress pe 3 categorii
-
-
+#create a new categorical variable with 3 groups based on the intervals
 sleep_quality_check['sleep_disorder_stress'] = pd.cut(
     sleep_quality_check['Stress.Level'], bins = [0, 3, 5, 9],
     labels = ['Low', 'Moderate', 'High'],
@@ -81,30 +73,32 @@ sleep_quality_check['sleep_disorder_stress'] = pd.cut(
 #result = sleep_quality_check[sleep_quality_check['sleep_disorder_stress'] == 'Low']
 #print(result)
 
-#vizualizare dimensiune set de date
+#shows the dimension of the data frame
 print(sleep_quality_check.shape)
-#vizualizarea structurii de date
+#shows the structure of the data
 print(sleep_quality_check.info())
-#vizualizarea denumirii coloanelor
+#show the names of columns
 print(sleep_quality_check.columns)
 
 #
 #print(sleep_quality_check.head)
-#
+#see the unique values for each variable below
 print(sleep_quality_check['Sleep.Disorder'].unique())
 print(sleep_quality_check['sleep_disorder_stress'].unique())
 
 #2.1
-
+#create a subset data frame with only the numerical variables
 data_sep_num = sleep_quality_check.loc[:, ['Age', 'Sleep.Duration', 'Stress.Level',
                                        'Quality.of.Sleep', 'Physical.Activity.Level',
                                        'Heart.Rate']]
 
+#set the option to show all variables in the console
 pd.set_option('display.max_columns', None)
+#show the statistical summary of the new data frame
 summary = data_sep_num.describe()
 print(summary)
 
-#
+#show the statistical summary for each variable
 sleep_quality_check['Age'].describe()
 sleep_quality_check['Sleep.Duration'].describe()
 sleep_quality_check['Stress.Level'].describe()
@@ -131,15 +125,15 @@ print('The kurtosis of Physical.Activity.Level is: ', kurtosis(sleep_quality_che
 print('The skewness of Heart.Rate is: ', skew(sleep_quality_check['Heart.Rate']))
 print('The kurtosis of Heart.Rate is: ', kurtosis(sleep_quality_check['Heart.Rate']))
 
-#var nenumerice
-
+#non numerice variables
 #data_groups = sleep_quality_check.groupby('sleep_disorder_stress')['Sleep.Duration'].describe()
 #data_groups = data_groups.round(4)
 
 sleep_quality_check['sleep_disorder_stress'].describe()
 sleep_quality_check['Sleep.Disorder'].describe()
 
-#2.2 analiza grafica
+#2.2 visual analysis
+#create a histogram for each variable
 #hist1 Age
 plt.figure(figsize=(10,8))
 plt.hist(x= sleep_quality_check['Age'],
@@ -195,7 +189,8 @@ plt.title('Histogram of sleep_quality_check["Heart.Rate"]')
 plt.xlabel('Heart Rate')
 plt.ylabel('Frequency')
 
-#analiza grafica variabile nenumerice
+#the visual analysis of non numeric variables
+#create a plot for each variable
 #plot1
 plt.figure(figsize=(10,8))
 plt.hist(x= sleep_quality_check['Sleep.Disorder'],
@@ -204,7 +199,6 @@ plt.hist(x= sleep_quality_check['Sleep.Disorder'],
 plt.title('Tulburari de somn intalnite')
 plt.xlabel('Sleep Disorder')
 plt.ylabel('Frequency')
-
 
 #plot2
 plt.figure(figsize=(10,8))
@@ -216,7 +210,7 @@ plt.xlabel('Stress Level')
 plt.ylabel('Frequency')
 
 #2.3
-#identificare outlieri
+#identify the outliers using box plots
 
 #bplot1
 plt.figure(figsize=(6,7))
@@ -250,12 +244,13 @@ plt.title('Boxplot of sleep_quality_check["Heart.Rate"]')
 
 
 #cap3
+#create a new table to find out the frequencies
 tabelarea_datelor = pd.crosstab(sleep_quality_check['Sleep.Disorder'],
                                 sleep_quality_check['sleep_disorder_stress'])
 
 print(tabelarea_datelor)
 
-#frecvente relative partiale
+#partial relative frequencies
 frecvente_relative_partiale = pd.crosstab(
     sleep_quality_check['Sleep.Disorder'], 
     sleep_quality_check['sleep_disorder_stress'], 
@@ -264,7 +259,7 @@ frecvente_relative_partiale = pd.crosstab(
 
 print(frecvente_relative_partiale)
 
-#frecvente relativ conditionate - Sleep.Disorder (linie)
+#relatively conditioned frequencies - Sleep.Disorder (line)
 frecvente_relativ_conditionate_SD = pd.crosstab(
     sleep_quality_check['Sleep.Disorder'], 
     sleep_quality_check['sleep_disorder_stress'], 
@@ -273,7 +268,7 @@ frecvente_relativ_conditionate_SD = pd.crosstab(
 
 print(frecvente_relativ_conditionate_SD)
 
-#frecvente relative conditionate - sleep_disorder_stress (coloana)
+#conditional relative frequencies - sleep_disorder_stress (column)
 frecvente_relativ_conditionate_SDS = pd.crosstab(
     sleep_quality_check['Sleep.Disorder'], 
     sleep_quality_check['sleep_disorder_stress'], 
@@ -282,7 +277,7 @@ frecvente_relativ_conditionate_SDS = pd.crosstab(
 
 print(frecvente_relativ_conditionate_SDS)
 
-#frecvente relativ marginale
+#relatively marginal frequencies
 frecvente_relative_marginale = pd.crosstab(
     sleep_quality_check['Sleep.Disorder'], 
     sleep_quality_check['sleep_disorder_stress'], 
@@ -292,6 +287,7 @@ frecvente_relative_marginale = pd.crosstab(
 print(frecvente_relative_marginale)
 
 #3.2
+#conducting a Chi-square test on the table above
 
 chisq, df, p_value, _ = chi2_contingency(tabelarea_datelor)
 
@@ -311,7 +307,7 @@ print('df: ', len(tabel_frecvente_SDS) - 1)
 print('P-value: ', p_value)
 
 
-#analiza de concordanță pentru variabila sleep_disorder_stress și o distribuție teoretică
+#concordance analysis for the sleep_disorder_stress variable and a theoretical distribution
 distributie_teoretica = [0.1, 0.3, 0.6]
 
 tabel_frecvente_SDS2 = sleep_quality_check['sleep_disorder_stress'].value_counts()
@@ -325,7 +321,7 @@ print('X-sq: ', X_sq)
 print('df: ', len(tabel_frecvente_SDS2) - 1)
 print('P-value: ', p_value)
 
-#analiza celei de a 2-a variabile Sleep.Disorder
+#analysis of the 2nd variable Sleep.Disorder
 tabel_frecvente_SleepD = sleep_quality_check['Sleep.Disorder'].value_counts()
 
 X_sq, p_value = chisquare(tabel_frecvente_SleepD)
@@ -334,7 +330,7 @@ print('X-sq: ', X_sq)
 print('df: ', len(tabel_frecvente_SleepD) - 1)
 print('P-value: ', p_value)
 
-#analiza de concordanță pentru variabila Sleep.Disorder și o distribuție teoretică
+#concordance analysis for the Sleep.Disorder variable and a theoretical distribution
 distributie_teoretica_SD = [0.1, 0.2, 0.7]
 
 tabel_frecvente_SleepD2 = sleep_quality_check['Sleep.Disorder'].value_counts()
@@ -351,7 +347,7 @@ print('P-value: ', p_value)
 
 #4.1
 
-#analiza de covarianta
+#covariance analysis
 analiza_cov = np.cov(data_sep_num, rowvar = False)
 
 df_analiza_cov = pd.DataFrame(analiza_cov, columns = data_sep_num.columns,
@@ -359,18 +355,17 @@ df_analiza_cov = pd.DataFrame(analiza_cov, columns = data_sep_num.columns,
 
 df_analiza_cov
 
-#realizare matricei corelatiilor (coeficientul Pearson)
 
+#creating the correlation matrix (Pearson coefficient)
 
 matrice_corelatieP = np.corrcoef(data_sep_num, rowvar = False)
-
 
 df_matrice_corelatieP = pd.DataFrame(matrice_corelatieP, columns = data_sep_num.columns,
                                      index = data_sep_num.columns)
 
 df_matrice_corelatieP
 
-#matrice coef Spearman
+#Spearman coefficient matrix
 
 matrice_corelatieS, _ = spearmanr(data_sep_num, axis = 0)
 
@@ -379,14 +374,14 @@ df_matrice_corelatieS = pd.DataFrame(matrice_corelatieS, columns = data_sep_num.
 
 df_matrice_corelatieS
 
-#testarea coef de corelatie Pearson
+#test of Pearson correlation
 
 Stress_level = sleep_quality_check['Stress.Level']
 Age = sleep_quality_check['Age']
 
 coef_corelatie, p_value = pearsonr(Stress_level, Age)
 
-print('Coeficientul de corelatie r: ', coef_corelatie)
+print('Correlation coeficient r: ', coef_corelatie)
 print('P-value: ', p_value)
 
 #2
@@ -396,7 +391,7 @@ Sleep_duration = sleep_quality_check['Sleep.Duration']
 
 coef_corelatie, p_value = pearsonr(Stress_level, Sleep_duration)
 
-print('Coeficientul de corelatie r: ', coef_corelatie)
+print('Correlation coeficient r: ', coef_corelatie)
 print('P-value: ', p_value)
 
 #3
@@ -406,7 +401,7 @@ QoS = sleep_quality_check['Quality.of.Sleep']
 
 coef_corelatie, p_value = pearsonr(Stress_level, QoS)
 
-print('Coeficientul de corelatie r: ', coef_corelatie)
+print('Correlation coeficient r: ', coef_corelatie)
 print('P-value: ', p_value)
 
 #4
@@ -416,7 +411,7 @@ PAL = sleep_quality_check['Physical.Activity.Level']
 
 coef_corelatie, p_value = pearsonr(Stress_level, PAL)
 
-print('Coeficientul de corelatie r: ', coef_corelatie)
+print('Correlation coeficient r: ', coef_corelatie)
 print('P-value: ', p_value)
 
 #5
@@ -426,11 +421,11 @@ Heart_rate = sleep_quality_check['Heart.Rate']
 
 coef_corelatie, p_value = pearsonr(Stress_level, Heart_rate)
 
-print('Coeficientul de corelatie r: ', coef_corelatie)
+print('Correlation coeficient r: ', coef_corelatie)
 print('P-value: ', p_value)
 
 #4.2
-#4.2.1 regresie liniara simpla si multipla
+#4.2.1 Simple linear regression model
 
 x = sleep_quality_check['Quality.of.Sleep']
 y = sleep_quality_check['Stress.Level']
@@ -442,7 +437,7 @@ regresie_lin_simpla = model.fit()
 
 print(regresie_lin_simpla.summary())
 
-#regresie liniara multipla
+#Multiple regression model
 import statsmodels.api as sm
 x_multiple = sleep_quality_check[['Quality.of.Sleep', 'Age']]
 y = sleep_quality_check['Stress.Level']
@@ -454,7 +449,7 @@ regresie_lin_multipla = model.fit()
 
 print(regresie_lin_multipla.summary())
 
-#4.2.2 regresia neliniara
+#4.2.2 Non-linear regression model
 
 Y = sleep_quality_check['Stress.Level']
 
@@ -468,17 +463,17 @@ print(regresie_neliniara.summary())
 
 #4.2.3
 
-#compararea a doua modele de regresie
+#Comparing 2 regression models
 
 print(sm.stats.anova_lm(regresie_lin_simpla, regresie_lin_multipla))
 
 
-#5 estimarea mediei
+#5 Mean estimation
 
 print('Interval de incredere calculat cu functie integrata:',
       sm.DescrStatsW(sleep_quality_check['Stress.Level']).tconfint_mean())
 
-#estimarea mediei prin interval de incredere
+#Mean estimation using a confidence interval
 def interval_incredere_medie(data, incredere, val_testata = 0):
     a = np.array(data)
     n = len(a)
@@ -492,7 +487,7 @@ def interval_incredere_medie(data, incredere, val_testata = 0):
 interval_incredere = interval_incredere_medie(sleep_quality_check['Stress.Level'], 0.95)
 print('Intervalul de incredere calculat prin intermediul functiei: ', interval_incredere)
 
-#testarea unei medii cu o valoare fixa
+#Mean test using a fixed value
 t_calc, p_value = stats.ttest_1samp(sleep_quality_check['Stress.Level'], 5)
 
 p_value_uni = p_value / 2 if t_calc > 0 else 1 - (p_value / 2)
@@ -502,7 +497,7 @@ print('T calculat: ', t_calc)
 print('P_value: ', p_value)
 print('Mean: ', mean)
 
-#5.2.2 testarea diferentei dintre doua medii (esantioane independente)
+#5.2.2 Testing the difference between two means (independent samples)
 data_filtered_SQC = sleep_quality_check[sleep_quality_check['Sleep.Disorder'].isin([
     'Insomnia', 'Sleep Apnea'])]
 
@@ -512,7 +507,7 @@ sleep_apnea_PC = data_filtered_SQC[data_filtered_SQC['Sleep.Disorder']
                                    == 'Sleep Apnea']['Stress.Level']
 
 t_calc, p_value = stats.bartlett(insomnia_PC, sleep_apnea_PC)
-#varianta celor 2 grupuri
+#variance of the 2 groups
 print('T-calc: ', t_calc)
 print('P-value: ', p_value)
 
@@ -527,7 +522,7 @@ print('P-value: ', p_value2)
 print('Mean of the category with Insomnia: ', mean_IPC)
 print('Mean of the category with Sleep Apnea: ', mean_SAPC)
 
-#testarea a 3 medii sau mai multe
+#testing 3 or more environments - ANOVA
 sleep_quality_check.rename(columns={'Stress.Level': 'Stress_Level'}, inplace=True)
 from statsmodels.formula.api import ols
 model_means = ols('Stress_Level ~ sleep_disorder_stress', data=sleep_quality_check).fit()
@@ -536,14 +531,14 @@ anova_rezultat_test = sm.stats.anova_lm(model_means, typ=2)
 print(anova_rezultat_test)
 print(model_means.params)
 
-#schimbarea numelui coloanei din dataset inapoi
+#changing the column name in the dataset back
 sleep_quality_check.rename(columns={'Stress_Level': 'Stress.Level'}, inplace=True)
 print(sleep_quality_check.columns)
 ################################################
 
 
-#testarea ipotezelor 
-#testarea modelului de regresie liniara simpla - ipoteze
+#hypothesis testing
+#simple linear regression model testing - hypotheses
 #1
 
 #Heteroskedasticity tests - White test
@@ -601,7 +596,7 @@ labels = ['Test Statistic', 'Test Statistic P-value',
          'F-Statistic', 'F-Test P-value']
 print(dict(zip(labels, white_test_rlm)))
 
-#R neliniara
+#R non-linear
 #1
 from statsmodels.stats.stattools import durbin_watson
 dw_stat = durbin_watson(regresie_neliniara.resid)
