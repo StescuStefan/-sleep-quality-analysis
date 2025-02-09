@@ -219,7 +219,6 @@ regresie_lin_multipla <- lm(Stress.Level~Quality.of.Sleep+Age, sleep_quality_che
 regresie_lin_multipla
 summary(regresie_lin_multipla)
 
-
 #4.2.2
 
 #the model for the non-linear regression
@@ -228,19 +227,6 @@ rm(regresie_neliniara)
 
 regresie_neliniara <- lm(Stress.Level~Quality.of.Sleep+I(Quality.of.Sleep^2), sleep_quality_check)
 
-
-# create a plot for the real data and the predicted data
-#plot(sleep_quality_check$Quality.of.Sleep, sleep_quality_check$Stress.Level,
-    # main = "Regresie Neliniară: Nivelul de Stres vs. Calitatea Somnului",
-    # xlab = "Calitatea Somnului",
-     #ylab = "Nivelul de Stres",
-    # pch = 19, col = "blue")  # Punctele pentru datele reale
-
-# Add the regression line
-#lines(sleep_quality_check$Quality.of.Sleep, predict(regresie_neliniara), col = "red", lwd = 2)
-
-
-#regresie_neliniara <- lm(Quality.of.Sleep~Stress.Level+I(Stress.Level^2), sleep_quality_check)
 regresie_neliniara
 
 summary(regresie_neliniara)
@@ -249,15 +235,11 @@ summary(regresie_neliniara)
 # Conducted ANOVA test between two regression models
 anova(regresie_lin_simpla, regresie_lin_multipla)
 
-
-
 #5.1
 #mean test of the variable Stress Level vs a set value 0 or 5
 t.test(sleep_quality_check$Stress.Level, mu = 0)
 #5.2.1
 t.test(sleep_quality_check$Stress.Level, mu = 5, alternative = "greater")
-
-
 
 levels(sleep_quality_check$sleep_disorder_stress)
 
@@ -279,9 +261,3 @@ t.test(Stress.Level~Sleep.Disorder, subset_sleep_quality_check)
 objectaov <- aov(Stress.Level~sleep_disorder_stress, sleep_quality_check)
 anova(objectaov)
 coef(objectaov)
-
-
-#table(sleep_quality_check$Sleep.Disorder, sleep_quality_check$Stress.Level)
-
-# chi sq test
-#chisq.test(sleep_quality_check$Sleep.Disorder, sleep_quality_check$Stress.Level)
