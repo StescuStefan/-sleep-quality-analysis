@@ -1,23 +1,26 @@
 # Sleep Quality and Lifestyle Factors Analysis
 
-A comprehensive data analysis project examining the relationships between sleep quality, stress levels, and various lifestyle factors using a public dataset from Kaggle.
+A data analysis project examining the relationships between sleep quality, stress levels, and various lifestyle factors using a dataset from Kaggle.
 
 ## Project Overview
-- Analyzed factors influencing sleep quality including stress, physical activity, heart rate, and pre-existing sleep disorders
-- Conducted extensive statistical analysis in both Python and R to validate findings
-- Implemented various statistical methods: hypothesis testing, correlation analysis, and regression modeling
+- Analysis of factors influencing sleep quality (stress, physical activity, pre-existing sleep disorders)
+- Implementation of statistical analysis in both Python and R
+- Application of statistical methods to identify correlations and influences
 
 ## Technical Implementation
-- Performed data preprocessing, cleaning, and feature engineering
-- Used visualization techniques to identify patterns and outliers
-- Implemented both linear and non-linear regression models
-- Conducted chi-square tests, ANOVA, and correlation analyses
-- Validated statistical assumptions using tests for heteroskedasticity and autocorrelation
+- Data preprocessing and cleaning
+- Creation of categorical variables from numerical data
+- Exploratory analysis through visualizations (histograms, boxplots)
+- Statistical tests (chi-square, Bartlett's, t-test, ANOVA)
+- Correlation analysis (Pearson, Spearman)
+- Simple and multiple linear regression models
+- Second-order non-linear regression model
+- Testing regression model hypotheses
 
 ## Key Findings
-- Identified significant correlations between stress levels and sleep quality
-- Discovered relationships between physical activity and sleep duration
-- Determined statistical differences in stress patterns based on sleep disorder types
+- Relationships between stress levels and sleep quality
+- Differences in stress patterns based on sleep disorder types
+- Impact of physical activity on sleep duration
 
 ## Technologies Used
 - Python: pandas, numpy, scipy, matplotlib, seaborn, statsmodels
