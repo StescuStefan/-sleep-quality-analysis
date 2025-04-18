@@ -3,7 +3,7 @@
 A comprehensive data analysis project examining the relationships between sleep quality, stress levels, and various lifestyle factors using a public dataset from Kaggle.
 
 ## Project Overview
-- Analyzed factors influencing sleep quality, including stress, physical activity, heart rate, and pre-existing sleep disorders
+- Analyzed factors influencing sleep quality including stress, physical activity, heart rate, and pre-existing sleep disorders
 - Conducted extensive statistical analysis in both Python and R to validate findings
 - Implemented various statistical methods: hypothesis testing, correlation analysis, and regression modeling
 
