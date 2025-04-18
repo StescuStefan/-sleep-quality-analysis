@@ -1,614 +1,541 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jan  2 13:22:45 2025
+Sleep Quality and Lifestyle Factors Analysis
 
-@author: stesc
+Author: Stefan Stescu
+Date: January 2, 2025
+
+This script analyzes factors that influence sleep quality, including stress levels,
+physical activity, and pre-existing sleep disorders using statistical methods.
 """
 
-#importing all libraries and functions needed
+#------------------------------------------------------------------------------
+# Import Libraries
+#------------------------------------------------------------------------------
+# Data manipulation
 import pandas as pd
-from pandas import read_excel
-import scipy.stats as stt
-import fredapi as fa
-from scipy.stats import mode
-from scipy.stats import skew
-from scipy.stats import kurtosis
-from scipy.stats import normaltest
-from scipy.stats import kstest
-from scipy.stats import pearsonr
+import numpy as np
+
+# Statistical analysis
+import scipy.stats as stats
+from scipy.stats import (
+    mode, skew, kurtosis, normaltest, kstest, pearsonr,
+    chi2_contingency, chisquare, spearmanr, levene
+)
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+from scipy import stats
+
+# Visualization
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib as mpl
-import scipy.stats as statistica
-import scipy.stats
-from scipy import stats
-from scipy.stats import levene
-from statsmodels.formula.api import ols
-import statsmodels.api as sm
-import numpy as np
-import scipy as sp
-import scipy.stats
-from pandas import read_csv
+
+# Other libraries
 from datetime import datetime
-from scipy.stats import chi2_contingency
-from scipy.stats import chisquare
-from scipy.stats import spearmanr
 
 
-#2 Preliminary operations
-#import the data from the CSV file
-sleep_data = read_csv("Sleep_health_and_lifestyle_dataset.csv")
-sleep_data.columns = sleep_data.columns.str.replace(' ', '.', regex=False)
-
-#create a new data set with the following conditions
-sleep_quality_check = sleep_data[
-    ((sleep_data['Sleep.Duration'] >= 5.0) & (sleep_data['Sleep.Duration'] <= 7.5)) &
-    ((sleep_data['Stress.Level'] >= 2) & (sleep_data['Stress.Level'] <= 9)) &
-    ((sleep_data['Quality.of.Sleep'] >= 3) & (sleep_data['Quality.of.Sleep'] <= 9))]
-
-#drop the unnecessary columns
-drop_columns = ['Daily.Steps', 'Blood.Pressure']
-sleep_quality_check = sleep_quality_check.drop(columns = drop_columns)
-#fill the NA values with the new value 'None'
-sleep_quality_check = sleep_quality_check.fillna({'Sleep.Disorder': 'None'})
-
-#create a new CSV file with the data that meet the conditions above
-sleep_quality_check.to_csv('sleep_quality_check.csv', index = False)
-
-#shows the data types for each variable included in the data frame
-print(sleep_quality_check.dtypes)
-
-#transform the Sleep.Disorder variable to categorical
-sleep_quality_check['Sleep.Disorder'] = pd.Categorical(
-    sleep_quality_check['Sleep.Disorder'],
-    categories = ['Insomnia', 'None', 'Sleep Apnea'])
-
-#create a new categorical variable with 3 groups based on the intervals
-sleep_quality_check['sleep_disorder_stress'] = pd.cut(
-    sleep_quality_check['Stress.Level'], bins = [0, 3, 5, 9],
-    labels = ['Low', 'Moderate', 'High'],
-    right = True)
-
-#print(sleep_quality_check)
-#result = sleep_quality_check[sleep_quality_check['sleep_disorder_stress'] == 'Low']
-#print(result)
-
-#shows the dimension of the data frame
-print(sleep_quality_check.shape)
-#shows the structure of the data
-print(sleep_quality_check.info())
-#show the names of columns
-print(sleep_quality_check.columns)
-
-#
-#print(sleep_quality_check.head)
-#see the unique values for each variable below
-print(sleep_quality_check['Sleep.Disorder'].unique())
-print(sleep_quality_check['sleep_disorder_stress'].unique())
-
-#2.1
-#create a subset data frame with only the numerical variables
-data_sep_num = sleep_quality_check.loc[:, ['Age', 'Sleep.Duration', 'Stress.Level',
-                                       'Quality.of.Sleep', 'Physical.Activity.Level',
-                                       'Heart.Rate']]
-
-#set the option to show all variables in the console
-pd.set_option('display.max_columns', None)
-#show the statistical summary of the new data frame
-summary = data_sep_num.describe()
-print(summary)
-
-#show the statistical summary for each variable
-sleep_quality_check['Age'].describe()
-sleep_quality_check['Sleep.Duration'].describe()
-sleep_quality_check['Stress.Level'].describe()
-sleep_quality_check['Quality.of.Sleep'].describe()
-sleep_quality_check['Physical.Activity.Level'].describe()
-sleep_quality_check['Heart.Rate'].describe()
-
-#skew & kurtosis
-print('The skewness of Age is: ', skew(sleep_quality_check['Age']))
-print('The kurtosis of Age is: ', kurtosis(sleep_quality_check['Age']))
-
-print('The skewness of Sleep.Duration is: ', skew(sleep_quality_check['Sleep.Duration']))
-print('The kurtosis of Sleep.Duration is: ', kurtosis(sleep_quality_check['Sleep.Duration']))
-
-print('The skewness of Stress.Level is: ', skew(sleep_quality_check['Stress.Level']))
-print('The kurtosis of Stress.Level is: ', kurtosis(sleep_quality_check['Stress.Level']))
-
-print('The skewness of Quality.of.Sleep is: ', skew(sleep_quality_check['Quality.of.Sleep']))
-print('The kurtosis of Quality.of.Sleep is: ', kurtosis(sleep_quality_check['Quality.of.Sleep']))
-
-print('The skewness of Physical.Activity.Level is: ', skew(sleep_quality_check['Physical.Activity.Level']))
-print('The kurtosis of Physical.Activity.Level is: ', kurtosis(sleep_quality_check['Physical.Activity.Level']))
-
-print('The skewness of Heart.Rate is: ', skew(sleep_quality_check['Heart.Rate']))
-print('The kurtosis of Heart.Rate is: ', kurtosis(sleep_quality_check['Heart.Rate']))
-
-#non numerice variables
-#data_groups = sleep_quality_check.groupby('sleep_disorder_stress')['Sleep.Duration'].describe()
-#data_groups = data_groups.round(4)
-
-sleep_quality_check['sleep_disorder_stress'].describe()
-sleep_quality_check['Sleep.Disorder'].describe()
-
-#2.2 visual analysis
-#create a histogram for each variable
-#hist1 Age
-plt.figure(figsize=(10,8))
-plt.hist(x= sleep_quality_check['Age'],
-         edgecolor='white',
-         color = 'green')
-plt.title('Histogram of sleep_quality_check["Age"]')
-plt.xlabel('Age of people in the study')
-plt.ylabel('Frequency')
-
-
-#hist2 Sleep Duration
-plt.figure(figsize=(10,8))
-plt.hist(x= sleep_quality_check['Sleep.Duration'],
-         edgecolor='white',
-         color = 'green')
-plt.title('Histogram of sleep_quality_check["Sleep.Duration"]')
-plt.xlabel('Sleep Duration per night')
-plt.ylabel('Frequency')
-
-#hist3 Stress Level
-plt.figure(figsize=(10,8))
-plt.hist(x= sleep_quality_check['Stress.Level'],
-         edgecolor='white',
-         color = 'green')
-plt.title('Histogram of sleep_quality_check["Stress.Level"]')
-plt.xlabel('Stress Level')
-plt.ylabel('Frequency')
-
-#hist4 Quality of Sleep
-plt.figure(figsize=(10,8))
-plt.hist(x= sleep_quality_check['Quality.of.Sleep'],
-         edgecolor='white',
-         color = 'green')
-plt.title('Histogram of sleep_quality_check["Quality.of.Sleep"]')
-plt.xlabel('Quality of Sleep')
-plt.ylabel('Frequency')
-
-#hist5 Physical Activity Level
-plt.figure(figsize=(10,8))
-plt.hist(x= sleep_quality_check['Physical.Activity.Level'],
-         edgecolor='white',
-         color = 'green')
-plt.title('Histogram of sleep_quality_check["Physical.Activity.Level"]')
-plt.xlabel('Physical Activity Level')
-plt.ylabel('Frequency')
-
-#hist6 Heart Rate
-plt.figure(figsize=(10,8))
-plt.hist(x= sleep_quality_check['Heart.Rate'],
-         edgecolor='white',
-         color = 'green')
-plt.title('Histogram of sleep_quality_check["Heart.Rate"]')
-plt.xlabel('Heart Rate')
-plt.ylabel('Frequency')
-
-#the visual analysis of non numeric variables
-#create a plot for each variable
-#plot1
-plt.figure(figsize=(10,8))
-plt.hist(x= sleep_quality_check['Sleep.Disorder'],
-         edgecolor='white',
-         color = 'red')
-plt.title('Tulburari de somn intalnite')
-plt.xlabel('Sleep Disorder')
-plt.ylabel('Frequency')
-
-#plot2
-plt.figure(figsize=(10,8))
-plt.hist(x= sleep_quality_check['sleep_disorder_stress'],
-         edgecolor='white',
-         color = 'blue')
-plt.title('Nivelul de stres in functie de probleme preexistente')
-plt.xlabel('Stress Level')
-plt.ylabel('Frequency')
-
-#2.3
-#identify the outliers using box plots
-
-#bplot1
-plt.figure(figsize=(6,7))
-plt.boxplot(sleep_quality_check['Age'])
-plt.title('Boxplot of sleep_quality_check["Age"]')
-
-#bplot2
-plt.figure(figsize=(6,7))
-plt.boxplot(sleep_quality_check['Sleep.Duration'])
-plt.title('Boxplot of sleep_quality_check["Sleep.Duration"]')
-
-#bplot3
-plt.figure(figsize=(6,7))
-plt.boxplot(sleep_quality_check['Stress.Level'])
-plt.title('Boxplot of sleep_quality_check["Stress.Level"]')
-
-#bplot4
-plt.figure(figsize=(6,7))
-plt.boxplot(sleep_quality_check['Quality.of.Sleep'])
-plt.title('Boxplot of sleep_quality_check["Quality.of.Sleep"]')
-
-#bplot5
-plt.figure(figsize=(6,7))
-plt.boxplot(sleep_quality_check['Physical.Activity.Level'])
-plt.title('Boxplot of sleep_quality_check["Physical.Activity.Level"]')
-
-#bplot6
-plt.figure(figsize=(6,7))
-plt.boxplot(sleep_quality_check['Heart.Rate'])
-plt.title('Boxplot of sleep_quality_check["Heart.Rate"]')
-
-
-#cap3
-#create a new table to find out the frequencies
-tabelarea_datelor = pd.crosstab(sleep_quality_check['Sleep.Disorder'],
-                                sleep_quality_check['sleep_disorder_stress'])
-
-print(tabelarea_datelor)
-
-#partial relative frequencies
-frecvente_relative_partiale = pd.crosstab(
-    sleep_quality_check['Sleep.Disorder'], 
-    sleep_quality_check['sleep_disorder_stress'], 
-    normalize=True,
-    margins=False)
-
-print(frecvente_relative_partiale)
-
-#relatively conditioned frequencies - Sleep.Disorder (line)
-frecvente_relativ_conditionate_SD = pd.crosstab(
-    sleep_quality_check['Sleep.Disorder'], 
-    sleep_quality_check['sleep_disorder_stress'], 
-    normalize='index',
-    margins=False)
-
-print(frecvente_relativ_conditionate_SD)
-
-#conditional relative frequencies - sleep_disorder_stress (column)
-frecvente_relativ_conditionate_SDS = pd.crosstab(
-    sleep_quality_check['Sleep.Disorder'], 
-    sleep_quality_check['sleep_disorder_stress'], 
-    normalize='columns',
-    margins=False)
-
-print(frecvente_relativ_conditionate_SDS)
-
-#relatively marginal frequencies
-frecvente_relative_marginale = pd.crosstab(
-    sleep_quality_check['Sleep.Disorder'], 
-    sleep_quality_check['sleep_disorder_stress'], 
-    normalize=True,
-    margins=True)
-
-print(frecvente_relative_marginale)
-
-#3.2
-#conducting a Chi-square test on the table above
-
-chisq, df, p_value, _ = chi2_contingency(tabelarea_datelor)
-
-chi2_contingency(tabelarea_datelor)
-
-print('Chisq: ', chisq)
-print('df: ', df)
-print('P-value: ', p_value)
-
-#3.3
-tabel_frecvente_SDS = sleep_quality_check['sleep_disorder_stress'].value_counts()
-
-X_sq, p_value = chisquare(tabel_frecvente_SDS)
-
-print('X-sq: ', X_sq)
-print('df: ', len(tabel_frecvente_SDS) - 1)
-print('P-value: ', p_value)
-
-
-#concordance analysis for the sleep_disorder_stress variable and a theoretical distribution
-distributie_teoretica = [0.1, 0.3, 0.6]
-
-tabel_frecvente_SDS2 = sleep_quality_check['sleep_disorder_stress'].value_counts()
-
-distributie_frecv_asteptate = [prob * len(sleep_quality_check)
-                               for prob in distributie_teoretica]
-
-X_sq, p_value = chisquare(tabel_frecvente_SDS2, distributie_frecv_asteptate)
-
-print('X-sq: ', X_sq)
-print('df: ', len(tabel_frecvente_SDS2) - 1)
-print('P-value: ', p_value)
-
-#analysis of the 2nd variable Sleep.Disorder
-tabel_frecvente_SleepD = sleep_quality_check['Sleep.Disorder'].value_counts()
-
-X_sq, p_value = chisquare(tabel_frecvente_SleepD)
-
-print('X-sq: ', X_sq)
-print('df: ', len(tabel_frecvente_SleepD) - 1)
-print('P-value: ', p_value)
-
-#concordance analysis for the Sleep.Disorder variable and a theoretical distribution
-distributie_teoretica_SD = [0.1, 0.2, 0.7]
-
-tabel_frecvente_SleepD2 = sleep_quality_check['Sleep.Disorder'].value_counts()
-
-distributie_frecv_asteptate2 = [prob * len(sleep_quality_check)
-                               for prob in distributie_teoretica_SD]
-
-X_sq, p_value = chisquare(tabel_frecvente_SleepD2, distributie_frecv_asteptate2)
-
-print('X-sq: ', X_sq)
-print('df: ', len(tabel_frecvente_SleepD2) - 1)
-print('P-value: ', p_value)
-
-
-#4.1
-
-#covariance analysis
-analiza_cov = np.cov(data_sep_num, rowvar = False)
-
-df_analiza_cov = pd.DataFrame(analiza_cov, columns = data_sep_num.columns,
-                              index = data_sep_num.columns)
-
-df_analiza_cov
-
-
-#creating the correlation matrix (Pearson coefficient)
-
-matrice_corelatieP = np.corrcoef(data_sep_num, rowvar = False)
-
-df_matrice_corelatieP = pd.DataFrame(matrice_corelatieP, columns = data_sep_num.columns,
-                                     index = data_sep_num.columns)
-
-df_matrice_corelatieP
-
-#Spearman coefficient matrix
-
-matrice_corelatieS, _ = spearmanr(data_sep_num, axis = 0)
-
-df_matrice_corelatieS = pd.DataFrame(matrice_corelatieS, columns = data_sep_num.columns,
-                                     index = data_sep_num.columns)
-
-df_matrice_corelatieS
-
-#test of Pearson correlation
-
-Stress_level = sleep_quality_check['Stress.Level']
-Age = sleep_quality_check['Age']
-
-coef_corelatie, p_value = pearsonr(Stress_level, Age)
-
-print('Correlation coeficient r: ', coef_corelatie)
-print('P-value: ', p_value)
-
-#2
-
-Stress_level = sleep_quality_check['Stress.Level']
-Sleep_duration = sleep_quality_check['Sleep.Duration']
-
-coef_corelatie, p_value = pearsonr(Stress_level, Sleep_duration)
-
-print('Correlation coeficient r: ', coef_corelatie)
-print('P-value: ', p_value)
-
-#3
-
-Stress_level = sleep_quality_check['Stress.Level']
-QoS = sleep_quality_check['Quality.of.Sleep']
-
-coef_corelatie, p_value = pearsonr(Stress_level, QoS)
-
-print('Correlation coeficient r: ', coef_corelatie)
-print('P-value: ', p_value)
-
-#4
-
-Stress_level = sleep_quality_check['Stress.Level']
-PAL = sleep_quality_check['Physical.Activity.Level']
-
-coef_corelatie, p_value = pearsonr(Stress_level, PAL)
-
-print('Correlation coeficient r: ', coef_corelatie)
-print('P-value: ', p_value)
-
-#5
-
-Stress_level = sleep_quality_check['Stress.Level']
-Heart_rate = sleep_quality_check['Heart.Rate']
-
-coef_corelatie, p_value = pearsonr(Stress_level, Heart_rate)
-
-print('Correlation coeficient r: ', coef_corelatie)
-print('P-value: ', p_value)
-
-#4.2
-#4.2.1 Simple linear regression model
-
-x = sleep_quality_check['Quality.of.Sleep']
-y = sleep_quality_check['Stress.Level']
-
-x = sm.add_constant(x)
-model = sm.OLS(y, x)
-
-regresie_lin_simpla = model.fit()
-
-print(regresie_lin_simpla.summary())
-
-#Multiple regression model
-import statsmodels.api as sm
-x_multiple = sleep_quality_check[['Quality.of.Sleep', 'Age']]
-y = sleep_quality_check['Stress.Level']
-
-x_multiple = sm.add_constant(x)
-model = sm.OLS(y, x_multiple)
-
-regresie_lin_multipla = model.fit()
-
-print(regresie_lin_multipla.summary())
-
-#4.2.2 Non-linear regression model
-
-Y = sleep_quality_check['Stress.Level']
-
-sleep_quality_check['Quality.of.Sleep^2'] = sleep_quality_check['Quality.of.Sleep']**2
-
-X_rn = sm.add_constant(sleep_quality_check[['Quality.of.Sleep', 'Quality.of.Sleep^2']])
-model = sm.OLS(Y, X_rn)
-regresie_neliniara = model.fit()
-
-print(regresie_neliniara.summary())
-
-#4.2.3
-
-#Comparing 2 regression models
-
-print(sm.stats.anova_lm(regresie_lin_simpla, regresie_lin_multipla))
-
-
-#5 Mean estimation
-
-print('Interval de incredere calculat cu functie integrata:',
-      sm.DescrStatsW(sleep_quality_check['Stress.Level']).tconfint_mean())
-
-#Mean estimation using a confidence interval
-def interval_incredere_medie(data, incredere, val_testata = 0):
-    a = np.array(data)
-    n = len(a)
-    media = np.mean(a)
-    sem = scipy.stats.sem(a)
-    h = sem * sp.stats.t.ppf((1 + incredere) / 2., n - 1)
-    p_val = stats.ttest_1samp(a, val_testata)
-    return media-h, media+h , p_val
-
+#------------------------------------------------------------------------------
+# Data Import and Preprocessing
+#------------------------------------------------------------------------------
+def load_and_preprocess_data():
+    """Load and preprocess the sleep dataset."""
+    # Import the data from the CSV file
+    sleep_data = pd.read_csv("Sleep_health_and_lifestyle_dataset.csv")
     
-interval_incredere = interval_incredere_medie(sleep_quality_check['Stress.Level'], 0.95)
-print('Intervalul de incredere calculat prin intermediul functiei: ', interval_incredere)
-
-#Mean test using a fixed value
-t_calc, p_value = stats.ttest_1samp(sleep_quality_check['Stress.Level'], 5)
-
-p_value_uni = p_value / 2 if t_calc > 0 else 1 - (p_value / 2)
-mean = np.mean(sleep_quality_check['Stress.Level'])
-
-print('T calculat: ', t_calc)
-print('P_value: ', p_value)
-print('Mean: ', mean)
-
-#5.2.2 Testing the difference between two means (independent samples)
-data_filtered_SQC = sleep_quality_check[sleep_quality_check['Sleep.Disorder'].isin([
-    'Insomnia', 'Sleep Apnea'])]
-
-insomnia_PC = data_filtered_SQC[data_filtered_SQC['Sleep.Disorder']
-                                == 'Insomnia']['Stress.Level']
-sleep_apnea_PC = data_filtered_SQC[data_filtered_SQC['Sleep.Disorder']
-                                   == 'Sleep Apnea']['Stress.Level']
-
-t_calc, p_value = stats.bartlett(insomnia_PC, sleep_apnea_PC)
-#variance of the 2 groups
-print('T-calc: ', t_calc)
-print('P-value: ', p_value)
-
-#welch two sample test stress.level pe grupe in functie de Sleep.Disorder
-
-t_calc2, p_value2 = stats.ttest_ind(insomnia_PC, sleep_apnea_PC)
-mean_IPC = np.mean(insomnia_PC)
-mean_SAPC = np.mean(sleep_apnea_PC)
-
-print('T-calc: ', t_calc2)
-print('P-value: ', p_value2)
-print('Mean of the category with Insomnia: ', mean_IPC)
-print('Mean of the category with Sleep Apnea: ', mean_SAPC)
-
-#testing 3 or more environments - ANOVA
-sleep_quality_check.rename(columns={'Stress.Level': 'Stress_Level'}, inplace=True)
-from statsmodels.formula.api import ols
-model_means = ols('Stress_Level ~ sleep_disorder_stress', data=sleep_quality_check).fit()
-import statsmodels.api as sm
-anova_rezultat_test = sm.stats.anova_lm(model_means, typ=2)
-print(anova_rezultat_test)
-print(model_means.params)
-
-#changing the column name in the dataset back
-sleep_quality_check.rename(columns={'Stress_Level': 'Stress.Level'}, inplace=True)
-print(sleep_quality_check.columns)
-################################################
+    # Replace spaces in column names with dots
+    sleep_data.columns = sleep_data.columns.str.replace(' ', '.', regex=False)
+    
+    # Create a filtered dataset with specific conditions
+    sleep_quality_check = sleep_data[
+        ((sleep_data['Sleep.Duration'] >= 5.0) & (sleep_data['Sleep.Duration'] <= 7.5)) &
+        ((sleep_data['Stress.Level'] >= 2) & (sleep_data['Stress.Level'] <= 9)) &
+        ((sleep_data['Quality.of.Sleep'] >= 3) & (sleep_data['Quality.of.Sleep'] <= 9))]
+    
+    # Drop unnecessary columns
+    drop_columns = ['Daily.Steps', 'Blood.Pressure']
+    sleep_quality_check = sleep_quality_check.drop(columns=drop_columns)
+    
+    # Fill NA values for Sleep.Disorder with 'None'
+    sleep_quality_check = sleep_quality_check.fillna({'Sleep.Disorder': 'None'})
+    
+    # Save the filtered dataset to a new CSV file
+    sleep_quality_check.to_csv('sleep_quality_check.csv', index=False)
+    
+    # Transform Sleep.Disorder to categorical
+    sleep_quality_check['Sleep.Disorder'] = pd.Categorical(
+        sleep_quality_check['Sleep.Disorder'],
+        categories=['Insomnia', 'None', 'Sleep Apnea'])
+    
+    # Create stress level categories
+    sleep_quality_check['sleep_disorder_stress'] = pd.cut(
+        sleep_quality_check['Stress.Level'], 
+        bins=[0, 3, 5, 9],
+        labels=['Low', 'Moderate', 'High'],
+        right=True)
+    
+    return sleep_quality_check
 
 
-#hypothesis testing
-#simple linear regression model testing - hypotheses
-#1
+#------------------------------------------------------------------------------
+# Exploratory Data Analysis
+#------------------------------------------------------------------------------
+def perform_eda(sleep_quality_check):
+    """Perform exploratory data analysis on the dataset."""
+    
+    # Display dataset information
+    print("Dataset shape:", sleep_quality_check.shape)
+    print("Dataset structure:")
+    print(sleep_quality_check.info())
+    print("Column names:", sleep_quality_check.columns)
+    
+    # Check unique values
+    print("Unique Sleep Disorders:", sleep_quality_check['Sleep.Disorder'].unique())
+    print("Unique Stress Levels:", sleep_quality_check['sleep_disorder_stress'].unique())
+    
+    # Create numerical subset for analysis
+    data_sep_num = sleep_quality_check.loc[:, [
+        'Age', 'Sleep.Duration', 'Stress.Level',
+        'Quality.of.Sleep', 'Physical.Activity.Level', 'Heart.Rate'
+    ]]
+    
+    # Display statistical summary
+    pd.set_option('display.max_columns', None)
+    summary = data_sep_num.describe()
+    print("Statistical Summary:")
+    print(summary)
+    
+    # Calculate skewness and kurtosis for each numerical variable
+    for column in data_sep_num.columns:
+        print(f"The skewness of {column} is: {skew(sleep_quality_check[column])}")
+        print(f"The kurtosis of {column} is: {kurtosis(sleep_quality_check[column])}")
+    
+    # Analyze categorical variables
+    print("sleep_disorder_stress statistics:")
+    print(sleep_quality_check['sleep_disorder_stress'].describe())
+    print("Sleep.Disorder statistics:")
+    print(sleep_quality_check['Sleep.Disorder'].describe())
+    
+    return data_sep_num
 
-#Heteroskedasticity tests - White test
-from statsmodels.stats.diagnostic import het_white
-white_test_rls = het_white(regresie_lin_simpla.resid, regresie_lin_simpla.model.exog)
 
-labels = ['Test Statistic', 'Test Statistic P-value', 
-         'F-Statistic', 'F-Test P-value']
-print(dict(zip(labels, white_test_rls)))
+#------------------------------------------------------------------------------
+# Data Visualization
+#------------------------------------------------------------------------------
+def create_visualizations(sleep_quality_check):
+    """Create various visualizations for data analysis."""
+    
+    # Create histograms for numerical variables
+    numerical_vars = [
+        'Age', 'Sleep.Duration', 'Stress.Level', 
+        'Quality.of.Sleep', 'Physical.Activity.Level', 'Heart.Rate'
+    ]
+    
+    for var in numerical_vars:
+        plt.figure(figsize=(10, 8))
+        plt.hist(x=sleep_quality_check[var], edgecolor='white', color='green')
+        plt.title(f'Histogram of {var}')
+        plt.xlabel(var)
+        plt.ylabel('Frequency')
+        plt.tight_layout()
+        # plt.savefig(f'histogram_{var}.png')  # Uncomment to save figures
+    
+    # Create histograms for categorical variables
+    plt.figure(figsize=(10, 8))
+    plt.hist(x=sleep_quality_check['Sleep.Disorder'], edgecolor='white', color='red')
+    plt.title('Sleep Disorders')
+    plt.xlabel('Sleep Disorder Type')
+    plt.ylabel('Frequency')
+    plt.tight_layout()
+    
+    plt.figure(figsize=(10, 8))
+    plt.hist(x=sleep_quality_check['sleep_disorder_stress'], edgecolor='white', color='blue')
+    plt.title('Stress Levels')
+    plt.xlabel('Stress Level Category')
+    plt.ylabel('Frequency')
+    plt.tight_layout()
+    
+    # Create boxplots to identify outliers
+    for var in numerical_vars:
+        plt.figure(figsize=(6, 7))
+        plt.boxplot(sleep_quality_check[var])
+        plt.title(f'Boxplot of {var}')
+        plt.tight_layout()
+        # plt.savefig(f'boxplot_{var}.png')  # Uncomment to save figures
 
-#2
-import statsmodels.stats.api as sm
-test_BP=sm.het_breuschpagan(regresie_lin_simpla.resid, regresie_lin_simpla.model.exog)
-labels = ['Test Statistic', 'Test Statistic P-value', 
-         'F-Statistic', 'F-Test P-value']
-print(dict(zip(labels, test_BP)))
 
-#3
-#autocorellation
-#Breusch-Godfrey
-from statsmodels.stats.diagnostic import acorr_breusch_godfrey
-bg_test = acorr_breusch_godfrey(regresie_lin_simpla)
-labels = ['Test Statistic', 'Test Statistic P-value', 
-         'F-Statistic', 'F-Test P-value']
-print(dict(zip(labels, bg_test)))
+#------------------------------------------------------------------------------
+# Cross-tabulation and Chi-Square Analysis
+#------------------------------------------------------------------------------
+def perform_crosstab_analysis(sleep_quality_check):
+    """Perform cross-tabulation and chi-square analysis on categorical variables."""
+    
+    # Create cross-tabulation
+    tabelarea_datelor = pd.crosstab(
+        sleep_quality_check['Sleep.Disorder'],
+        sleep_quality_check['sleep_disorder_stress']
+    )
+    print("Cross-tabulation:")
+    print(tabelarea_datelor)
+    
+    # Calculate relative frequencies
+    print("\nPartial relative frequencies:")
+    freq_rel_partial = pd.crosstab(
+        sleep_quality_check['Sleep.Disorder'], 
+        sleep_quality_check['sleep_disorder_stress'], 
+        normalize=True,
+        margins=False
+    )
+    print(freq_rel_partial)
+    
+    # Calculate row-conditional frequencies
+    print("\nSleep.Disorder conditional frequencies (by row):")
+    freq_cond_row = pd.crosstab(
+        sleep_quality_check['Sleep.Disorder'], 
+        sleep_quality_check['sleep_disorder_stress'], 
+        normalize='index',
+        margins=False
+    )
+    print(freq_cond_row)
+    
+    # Calculate column-conditional frequencies
+    print("\nSleep.Disorder conditional frequencies (by column):")
+    freq_cond_col = pd.crosstab(
+        sleep_quality_check['Sleep.Disorder'], 
+        sleep_quality_check['sleep_disorder_stress'], 
+        normalize='columns',
+        margins=False
+    )
+    print(freq_cond_col)
+    
+    # Calculate marginal frequencies
+    print("\nMarginal frequencies:")
+    freq_marginal = pd.crosstab(
+        sleep_quality_check['Sleep.Disorder'], 
+        sleep_quality_check['sleep_disorder_stress'], 
+        normalize=True,
+        margins=True
+    )
+    print(freq_marginal)
+    
+    # Perform chi-square test on the cross-tabulation
+    chisq, df, p_value, _ = chi2_contingency(tabelarea_datelor)
+    print("\nChi-square test results:")
+    print(f'Chisq: {chisq}')
+    print(f'df: {df}')
+    print(f'P-value: {p_value}')
+    
+    return tabelarea_datelor
 
-#4 BP
-import statsmodels.stats.api as sm
-test_BP=sm.het_breuschpagan(regresie_lin_simpla.resid, regresie_lin_simpla.model.exog)
-labels = ['Test Statistic', 'Test Statistic P-value', 
-         'F-Statistic', 'F-Test P-value']
-print(dict(zip(labels, test_BP)))
 
-#RLM
-#1
+#------------------------------------------------------------------------------
+# Frequency Analysis for Categorical Variables
+#------------------------------------------------------------------------------
+def analyze_categorical_frequencies(sleep_quality_check):
+    """Analyze frequency distributions of categorical variables."""
+    
+    # Frequency analysis for sleep_disorder_stress
+    print("\nFrequency analysis for sleep_disorder_stress:")
+    tabel_frecvente_SDS = sleep_quality_check['sleep_disorder_stress'].value_counts()
+    X_sq, p_value = chisquare(tabel_frecvente_SDS)
+    print(f'X-sq: {X_sq}')
+    print(f'df: {len(tabel_frecvente_SDS) - 1}')
+    print(f'P-value: {p_value}')
+    
+    # Compare observed frequencies with theoretical distribution
+    print("\nComparing sleep_disorder_stress with theoretical distribution:")
+    distr_teoretica = [0.1, 0.3, 0.6]
+    tabel_frecvente_SDS2 = sleep_quality_check['sleep_disorder_stress'].value_counts()
+    distr_frecv_asteptate = [prob * len(sleep_quality_check) for prob in distr_teoretica]
+    X_sq, p_value = chisquare(tabel_frecvente_SDS2, distr_frecv_asteptate)
+    print(f'X-sq: {X_sq}')
+    print(f'df: {len(tabel_frecvente_SDS2) - 1}')
+    print(f'P-value: {p_value}')
+    
+    # Frequency analysis for Sleep.Disorder
+    print("\nFrequency analysis for Sleep.Disorder:")
+    tabel_frecvente_SleepD = sleep_quality_check['Sleep.Disorder'].value_counts()
+    X_sq, p_value = chisquare(tabel_frecvente_SleepD)
+    print(f'X-sq: {X_sq}')
+    print(f'df: {len(tabel_frecvente_SleepD) - 1}')
+    print(f'P-value: {p_value}')
+    
+    # Compare observed frequencies with theoretical distribution
+    print("\nComparing Sleep.Disorder with theoretical distribution:")
+    distr_teoretica_SD = [0.1, 0.2, 0.7]
+    tabel_frecvente_SleepD2 = sleep_quality_check['Sleep.Disorder'].value_counts()
+    distr_frecv_asteptate2 = [prob * len(sleep_quality_check) for prob in distr_teoretica_SD]
+    X_sq, p_value = chisquare(tabel_frecvente_SleepD2, distr_frecv_asteptate2)
+    print(f'X-sq: {X_sq}')
+    print(f'df: {len(tabel_frecvente_SleepD2) - 1}')
+    print(f'P-value: {p_value}')
 
-from statsmodels.stats.stattools import durbin_watson
-dw_stat = durbin_watson(regresie_lin_multipla.resid)
-print(f"Durbin-Watson Statistic: {dw_stat}")
-#2
-print(stats.jarque_bera(regresie_lin_multipla.resid))
 
-#3
-import statsmodels.stats.api as sm
-test_BP_RLM = sm.het_breuschpagan(regresie_lin_multipla.resid, regresie_lin_multipla.model.exog)
-labels = ['Test Statistic', 'Test Statistic P-value', 
-         'F-Statistic', 'F-Test P-value']
-print(dict(zip(labels, test_BP_RLM)))
+#------------------------------------------------------------------------------
+# Correlation Analysis
+#------------------------------------------------------------------------------
+def perform_correlation_analysis(sleep_quality_check, data_sep_num):
+    """Perform correlation analysis on numerical variables."""
+    
+    # Covariance analysis
+    analiza_cov = np.cov(data_sep_num, rowvar=False)
+    df_analiza_cov = pd.DataFrame(
+        analiza_cov, 
+        columns=data_sep_num.columns, 
+        index=data_sep_num.columns
+    )
+    print("\nCovariance matrix:")
+    print(df_analiza_cov)
+    
+    # Pearson correlation
+    matrice_corelatieP = np.corrcoef(data_sep_num, rowvar=False)
+    df_matrice_corelatieP = pd.DataFrame(
+        matrice_corelatieP, 
+        columns=data_sep_num.columns, 
+        index=data_sep_num.columns
+    )
+    print("\nPearson correlation matrix:")
+    print(df_matrice_corelatieP)
+    
+    # Spearman correlation
+    matrice_corelatieS, _ = spearmanr(data_sep_num, axis=0)
+    df_matrice_corelatieS = pd.DataFrame(
+        matrice_corelatieS, 
+        columns=data_sep_num.columns, 
+        index=data_sep_num.columns
+    )
+    print("\nSpearman correlation matrix:")
+    print(df_matrice_corelatieS)
+    
+    # Perform correlation tests between Stress.Level and other variables
+    variables = ['Age', 'Sleep.Duration', 'Quality.of.Sleep', 
+                'Physical.Activity.Level', 'Heart.Rate']
+    
+    print("\nCorrelation tests with Stress.Level:")
+    for var in variables:
+        coef, p_val = pearsonr(sleep_quality_check['Stress.Level'], sleep_quality_check[var])
+        print(f'Correlation between Stress.Level and {var}:')
+        print(f'  Correlation coefficient r: {coef}')
+        print(f'  P-value: {p_val}')
 
-#4
-from statsmodels.stats.diagnostic import het_white
-white_test_rlm = het_white(regresie_lin_multipla.resid, regresie_lin_multipla.model.exog)
 
-labels = ['Test Statistic', 'Test Statistic P-value', 
-         'F-Statistic', 'F-Test P-value']
-print(dict(zip(labels, white_test_rlm)))
+#------------------------------------------------------------------------------
+# Regression Analysis
+#------------------------------------------------------------------------------
+def perform_regression_analysis(sleep_quality_check):
+    """Perform regression analysis to model stress levels."""
+    
+    # Simple linear regression - Quality of Sleep predicting Stress Level
+    print("\nSimple Linear Regression Model:")
+    x = sleep_quality_check['Quality.of.Sleep']
+    y = sleep_quality_check['Stress.Level']
+    x_with_const = sm.add_constant(x)
+    model = sm.OLS(y, x_with_const)
+    regresie_lin_simpla = model.fit()
+    print(regresie_lin_simpla.summary())
+    
+    # Multiple linear regression - Quality of Sleep and Age predicting Stress Level
+    print("\nMultiple Linear Regression Model:")
+    x_multiple = sleep_quality_check[['Quality.of.Sleep', 'Age']]
+    x_multiple_with_const = sm.add_constant(x_multiple)
+    model = sm.OLS(y, x_multiple_with_const)
+    regresie_lin_multipla = model.fit()
+    print(regresie_lin_multipla.summary())
+    
+    # Non-linear regression - Quadratic model for Quality of Sleep
+    print("\nNon-linear Regression Model:")
+    Y = sleep_quality_check['Stress.Level']
+    sleep_quality_check['Quality.of.Sleep^2'] = sleep_quality_check['Quality.of.Sleep']**2
+    X_rn = sm.add_constant(sleep_quality_check[['Quality.of.Sleep', 'Quality.of.Sleep^2']])
+    model = sm.OLS(Y, X_rn)
+    regresie_neliniara = model.fit()
+    print(regresie_neliniara.summary())
+    
+    # Compare regression models
+    print("\nComparing Regression Models (ANOVA):")
+    print(sm.stats.anova_lm(regresie_lin_simpla, regresie_lin_multipla))
+    
+    return regresie_lin_simpla, regresie_lin_multipla, regresie_neliniara
 
-#R non-linear
-#1
-from statsmodels.stats.stattools import durbin_watson
-dw_stat = durbin_watson(regresie_neliniara.resid)
-print(f"Durbin-Watson Statistic: {dw_stat}")
 
-#2
-print(stats.jarque_bera(regresie_neliniara.resid))
+#------------------------------------------------------------------------------
+# Hypothesis Testing
+#------------------------------------------------------------------------------
+def perform_hypothesis_testing(sleep_quality_check):
+    """Perform various hypothesis tests on the dataset."""
+    
+    # Confidence interval for Stress.Level mean
+    print("\nConfidence interval for Stress.Level mean:")
+    conf_int = sm.DescrStatsW(sleep_quality_check['Stress.Level']).tconfint_mean()
+    print(f'Confidence interval: {conf_int}')
+    
+    # Custom function for confidence interval calculation
+    def interval_incredere_medie(data, incredere, val_testata=0):
+        a = np.array(data)
+        n = len(a)
+        media = np.mean(a)
+        sem = stats.sem(a)
+        h = sem * stats.t.ppf((1 + incredere) / 2., n - 1)
+        p_val = stats.ttest_1samp(a, val_testata)
+        return media-h, media+h, p_val
+    
+    interval_incredere = interval_incredere_medie(sleep_quality_check['Stress.Level'], 0.95)
+    print(f'Confidence interval (custom function): {interval_incredere[:2]}')
+    
+    # T-test for Stress.Level against a fixed value (5)
+    t_calc, p_value = stats.ttest_1samp(sleep_quality_check['Stress.Level'], 5)
+    p_value_uni = p_value / 2 if t_calc > 0 else 1 - (p_value / 2)
+    mean = np.mean(sleep_quality_check['Stress.Level'])
+    print("\nOne-sample t-test (Stress.Level against 5):")
+    print(f'T statistic: {t_calc}')
+    print(f'P-value: {p_value}')
+    print(f'Mean: {mean}')
+    
+    # Test difference between two groups (Insomnia vs Sleep Apnea)
+    data_filtered_SQC = sleep_quality_check[
+        sleep_quality_check['Sleep.Disorder'].isin(['Insomnia', 'Sleep Apnea'])
+    ]
+    
+    insomnia_PC = data_filtered_SQC[
+        data_filtered_SQC['Sleep.Disorder'] == 'Insomnia'
+    ]['Stress.Level']
+    
+    sleep_apnea_PC = data_filtered_SQC[
+        data_filtered_SQC['Sleep.Disorder'] == 'Sleep Apnea'
+    ]['Stress.Level']
+    
+    # Test for equal variances
+    t_calc, p_value = stats.bartlett(insomnia_PC, sleep_apnea_PC)
+    print("\nBartlett's test for equal variances:")
+    print(f'T statistic: {t_calc}')
+    print(f'P-value: {p_value}')
+    
+    # Welch's t-test for two independent samples
+    t_calc2, p_value2 = stats.ttest_ind(insomnia_PC, sleep_apnea_PC)
+    mean_IPC = np.mean(insomnia_PC)
+    mean_SAPC = np.mean(sleep_apnea_PC)
+    print("\nWelch's t-test for Insomnia vs Sleep Apnea:")
+    print(f'T statistic: {t_calc2}')
+    print(f'P-value: {p_value2}')
+    print(f'Mean for Insomnia: {mean_IPC}')
+    print(f'Mean for Sleep Apnea: {mean_SAPC}')
+    
+    # ANOVA test for stress levels across stress categories
+    sleep_quality_check.rename(columns={'Stress.Level': 'Stress_Level'}, inplace=True)
+    model_means = ols('Stress_Level ~ sleep_disorder_stress', data=sleep_quality_check).fit()
+    anova_rezultat_test = sm.stats.anova_lm(model_means, typ=2)
+    print("\nANOVA test results:")
+    print(anova_rezultat_test)
+    print("Model parameters:")
+    print(model_means.params)
+    
+    # Change column name back
+    sleep_quality_check.rename(columns={'Stress_Level': 'Stress.Level'}, inplace=True)
 
-#3
-from statsmodels.stats.diagnostic import het_white
-white_test_rn = het_white(regresie_neliniara.resid, regresie_neliniara.model.exog)
 
-labels = ['Test Statistic', 'Test Statistic P-value', 
-         'F-Statistic', 'F-Test P-value']
-print(dict(zip(labels, white_test_rn)))
+#------------------------------------------------------------------------------
+# Diagnostic Tests for Regression Models
+#------------------------------------------------------------------------------
+def perform_diagnostic_tests(regresie_lin_simpla, regresie_lin_multipla, regresie_neliniara):
+    """Perform diagnostic tests on regression models."""
+    
+    from statsmodels.stats.diagnostic import het_white, acorr_breusch_godfrey
+    from statsmodels.stats.stattools import durbin_watson
+    import statsmodels.stats.api as sma
+    
+    # Simple Linear Regression Tests
+    print("\nDiagnostic Tests for Simple Linear Regression:")
+    
+    # White test for heteroskedasticity
+    white_test_rls = het_white(regresie_lin_simpla.resid, regresie_lin_simpla.model.exog)
+    labels = ['Test Statistic', 'Test Statistic P-value', 'F-Statistic', 'F-Test P-value']
+    print("White test for heteroskedasticity:")
+    print(dict(zip(labels, white_test_rls)))
+    
+    # Breusch-Pagan test for heteroskedasticity
+    test_BP = sma.het_breuschpagan(regresie_lin_simpla.resid, regresie_lin_simpla.model.exog)
+    print("Breusch-Pagan test for heteroskedasticity:")
+    print(dict(zip(labels, test_BP)))
+    
+    # Breusch-Godfrey test for autocorrelation
+    bg_test = acorr_breusch_godfrey(regresie_lin_simpla)
+    print("Breusch-Godfrey test for autocorrelation:")
+    print(dict(zip(labels, bg_test)))
+    
+    # Multiple Linear Regression Tests
+    print("\nDiagnostic Tests for Multiple Linear Regression:")
+    
+    # Durbin-Watson test for autocorrelation
+    dw_stat_mlr = durbin_watson(regresie_lin_multipla.resid)
+    print(f"Durbin-Watson Statistic: {dw_stat_mlr}")
+    
+    # Jarque-Bera test for normality
+    jb_stat_mlr, jb_pval_mlr = stats.jarque_bera(regresie_lin_multipla.resid)
+    print(f"Jarque-Bera test: statistic={jb_stat_mlr}, p-value={jb_pval_mlr}")
+    
+    # Breusch-Pagan test for heteroskedasticity
+    test_BP_RLM = sma.het_breuschpagan(regresie_lin_multipla.resid, regresie_lin_multipla.model.exog)
+    print("Breusch-Pagan test for heteroskedasticity:")
+    print(dict(zip(labels, test_BP_RLM)))
+    
+    # White test for heteroskedasticity
+    white_test_rlm = het_white(regresie_lin_multipla.resid, regresie_lin_multipla.model.exog)
+    print("White test for heteroskedasticity:")
+    print(dict(zip(labels, white_test_rlm)))
+    
+    # Non-linear Regression Tests
+    print("\nDiagnostic Tests for Non-linear Regression:")
+    
+    # Durbin-Watson test for autocorrelation
+    dw_stat_nlr = durbin_watson(regresie_neliniara.resid)
+    print(f"Durbin-Watson Statistic: {dw_stat_nlr}")
+    
+    # Jarque-Bera test for normality
+    jb_stat_nlr, jb_pval_nlr = stats.jarque_bera(regresie_neliniara.resid)
+    print(f"Jarque-Bera test: statistic={jb_stat_nlr}, p-value={jb_pval_nlr}")
+    
+    # White test for heteroskedasticity
+    white_test_rn = het_white(regresie_neliniara.resid, regresie_neliniara.model.exog)
+    print("White test for heteroskedasticity:")
+    print(dict(zip(labels, white_test_rn)))
+
+
+#------------------------------------------------------------------------------
+# Main Function
+#------------------------------------------------------------------------------
+def main():
+    """Main function to execute the analysis."""
+    
+    # Load and preprocess data
+    sleep_quality_check = load_and_preprocess_data()
+    
+    # Perform exploratory data analysis
+    data_sep_num = perform_eda(sleep_quality_check)
+    
+    # Create visualizations
+    create_visualizations(sleep_quality_check)
+    
+    # Perform cross-tabulation analysis
+    tabelarea_datelor = perform_crosstab_analysis(sleep_quality_check)
+    
+    # Analyze categorical frequencies
+    analyze_categorical_frequencies(sleep_quality_check)
+    
+    # Perform correlation analysis
+    perform_correlation_analysis(sleep_quality_check, data_sep_num)
+    
+    # Perform regression analysis
+    regresie_lin_simpla, regresie_lin_multipla, regresie_neliniara = perform_regression_analysis(sleep_quality_check)
+    
+    # Perform hypothesis testing
+    perform_hypothesis_testing(sleep_quality_check)
+    
+    # Perform diagnostic tests for regression models
+    perform_diagnostic_tests(regresie_lin_simpla, regresie_lin_multipla, regresie_neliniara)
+    
+    print("\nAnalysis completed successfully.")
+
+
+if __name__ == "__main__":
+    main()
