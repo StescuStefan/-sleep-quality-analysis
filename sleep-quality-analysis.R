@@ -1,263 +1,342 @@
-library(tidyverse)
-library(dplyr)
-library(tidyr)
-library(stringr)
-library(boot)
-library(psych)
-library(stats)
+###############################################################################
+# Sleep Quality and Lifestyle Factors Analysis
+# 
+# Author: Stefan Stescu
+# Date: January 2025
+#
+# This script analyzes the relationships between sleep quality, stress levels,
+# and various lifestyle factors using statistical methods in R.
+###############################################################################
 
-#importing the data set from the CSV file (Kaggle)
+#------------------------------------------------------------------------------
+# Load Required Libraries
+#------------------------------------------------------------------------------
+library(tidyverse)  # Data manipulation and visualization
+library(dplyr)      # Data manipulation
+library(tidyr)      # Data cleaning
+library(stringr)    # String manipulation
+library(boot)       # Bootstrap resampling
+library(psych)      # Psychological statistics
+library(stats)      # Statistical functions
+
+#------------------------------------------------------------------------------
+# Data Import and Processing
+#------------------------------------------------------------------------------
+# Import the dataset from the CSV file
 sleep <- read.csv("Sleep_health_and_lifestyle_dataset.csv")
 
-sleep_quality_check <- subset(sleep, 
-                              (Sleep.Duration >= 5.0 & Sleep.Duration <= 7.5) & 
-                                (Stress.Level >= 2 & Stress.Level <= 9) & 
-                                (Quality.of.Sleep >= 3 & Quality.of.Sleep <= 9), 
-                              select = c(Person.ID, Gender, Age, Occupation, Sleep.Duration, Stress.Level, Quality.of.Sleep,
-                                         Physical.Activity.Level, BMI.Category, Heart.Rate, Sleep.Disorder))
+# Create a filtered subset based on specific conditions
+sleep_quality_check <- subset(
+  sleep, 
+  (Sleep.Duration >= 5.0 & Sleep.Duration <= 7.5) & 
+    (Stress.Level >= 2 & Stress.Level <= 9) & 
+    (Quality.of.Sleep >= 3 & Quality.of.Sleep <= 9), 
+  select = c(Person.ID, Gender, Age, Occupation, Sleep.Duration, 
+             Stress.Level, Quality.of.Sleep, Physical.Activity.Level, 
+             BMI.Category, Heart.Rate, Sleep.Disorder)
+)
 
-#removing the data frame if necessary and other variables
-rm(sleep)
-rm(sleep_quality_check)
-rm(data_sep_num)
-#colnames(sleep) <-make.names(colnames(sleep))
-#view a brief summary of the new subset we've just created
-View(sleep_quality_check)
+# Optional: Remove original dataframe to free memory
+# rm(sleep)
 
-#checking if there are NA values in the data
+# Check for missing values
 colSums(is.na(sleep_quality_check))
-#renaming the first column
-colnames(sleep)[which(colnames(sleep) == "")] <- "Person.ID"
-colnames(sleep_quality_check)
 
-# create a new CSV file with only the data that meet the conditions from above
-write.csv(sleep_quality_check, "C:/Users/stesc/Documents/Proiect in R/sleep_quality_check.csv", row.names = FALSE)
-#checking the classes of the variables
-sapply(sleep_quality_check, class)
+# Save the filtered dataset to a CSV file
+write.csv(sleep_quality_check, "sleep_quality_check.csv", row.names = FALSE)
 
+# Convert Sleep.Disorder to a factor
 sleep_quality_check$Sleep.Disorder <- as.factor(sleep_quality_check$Sleep.Disorder)
 
-#changing the data type of variable Gender
-#sleep_quality_check$Gender <- as.character(sleep_quality_check$Gender)
+# Create a categorical variable for stress levels
+sleep_quality_check$sleep_disorder_stress <- cut(
+  sleep_quality_check$Stress.Level, 
+  c(0, 3, 5, 9),
+  c("Low", "Moderate", "High")
+)
 
+#------------------------------------------------------------------------------
+# Exploratory Data Analysis
+#------------------------------------------------------------------------------
+# Display basic information about the dataset
+dim(sleep_quality_check)      # Dimensions
+str(sleep_quality_check)      # Structure
+names(sleep_quality_check)    # Variable names
 
-#sleep_quality_check$overall_physical_state <- cut(sleep_quality_check$Heart.Rate, 
-                                                  #c(0, 60, 100, 200),de
-                                                  #c("Low", "Normal", "High"))
-
-#removing the "overall_physical_state" column from the data frame
-#sleep_quality_check <- sleep_quality_check[,-which(names(sleep_quality_check) == "overall_physical_state")]
-
-#removing the column "sleep_disorder_stress"
-sleep_quality_check <- sleep_quality_check[,-which(names(sleep_quality_check) == "sleep_disorder_stress")]
-
-#create the categorial sleep_disorder_stress variable
-sleep_quality_check$sleep_disorder_stress <- cut(sleep_quality_check$Stress.Level, 
-                                                  c(0, 3, 5, 9),
-                                                  c("Low", "Moderate", "High"))
-
-#shows the dimension of the data frame
-dim(sleep_quality_check)
-#displays the internal structure of the matrix, similar as the summary() function
-str(sleep_quality_check)
-#display the names of the variables
-names(sleep_quality_check)
-
-#checking the levels of the variables
+# Check factor levels
 levels(sleep_quality_check$sleep_disorder_stress)
 levels(sleep_quality_check$Sleep.Disorder)
 
-#2.1
-#create a new data set including only the numerical variables
-data_sep_num <- subset(sleep_quality_check, select = c(Age, Sleep.Duration, Stress.Level, 
-                                                       Quality.of.Sleep, Physical.Activity.Level, Heart.Rate))
-#describing the subset data frame created above
+# Create a numerical subset for analysis
+data_sep_num <- subset(
+  sleep_quality_check, 
+  select = c(Age, Sleep.Duration, Stress.Level, Quality.of.Sleep, 
+             Physical.Activity.Level, Heart.Rate)
+)
+
+# Descriptive statistics for numerical variables
 describe(data_sep_num)
 summary(data_sep_num)
 
-#shows the lowest value of the variable Age
-#min(sleep_quality_check$Age)
-
-#describing each numeric variable
+# Summary statistics for individual variables
 summary(sleep_quality_check$Age)
-
 summary(sleep_quality_check$Sleep.Duration)
-
 summary(sleep_quality_check$Stress.Level)
-
 summary(sleep_quality_check$Quality.of.Sleep)
-
 summary(sleep_quality_check$Physical.Activity.Level)
-
 summary(sleep_quality_check$Heart.Rate)
 
+# Group statistics
+describeBy(
+  sleep_quality_check$Sleep.Duration,
+  group = sleep_quality_check$sleep_disorder_stress, 
+  digits = 4
+)
 
+describeBy(
+  data_sep_num, 
+  group = sleep_quality_check$Sleep.Disorder, 
+  digits = 4
+)
 
-install.packages("psych")
-library(psych)
-describe(data_sep_num)
+# Calculate means by groups
+tapply(
+  sleep_quality_check$Quality.of.Sleep, 
+  sleep_quality_check$sleep_disorder_stress, 
+  mean
+)
 
-describeBy(sleep_quality_check$Sleep.Duration,
-           group = sleep_quality_check$sleep_disorder_stress, digits = 4)
+aggregate(
+  Quality.of.Sleep ~ Sleep.Disorder, 
+  sleep_quality_check, 
+  mean
+)
 
-describeBy(data_sep_num, group = sleep_quality_check$Sleep.Disorder, digits = 4)
+#------------------------------------------------------------------------------
+# Data Visualization
+#------------------------------------------------------------------------------
+# Histograms for numerical variables
+hist(
+  sleep_quality_check$Age, 
+  xlab = "Age of the people involved in the analysis",
+  main = "Distribution of Age",
+  col = "lightblue",
+  border = "white"
+)
 
-#shows the mean value of the variable Quality of Sleep based on the sleep_disorder_stress variable groups
-tapply(sleep_quality_check$Quality.of.Sleep, sleep_quality_check$sleep_disorder_stress, mean)
+hist(
+  sleep_quality_check$Sleep.Duration, 
+  xlab = "Sleep Duration per night",
+  main = "Distribution of Sleep Duration",
+  col = "lightblue",
+  border = "white"
+)
 
-#mean value of Quality of Sleep (the variable with values) based on the categories of variable Sleep.Disorder
-aggregate(Quality.of.Sleep~Sleep.Disorder, sleep_quality_check, mean)
+hist(
+  sleep_quality_check$Stress.Level, 
+  xlab = "Stress Level",
+  main = "Distribution of Stress Level",
+  col = "lightblue",
+  border = "white"
+)
 
+hist(
+  sleep_quality_check$Quality.of.Sleep, 
+  xlab = "Quality of Sleep",
+  main = "Distribution of Sleep Quality",
+  col = "lightblue",
+  border = "white"
+)
 
-#2.2
-#create the histograms for each numeric variable
+hist(
+  sleep_quality_check$Physical.Activity.Level, 
+  xlab = "Physical Activity Level",
+  main = "Distribution of Physical Activity",
+  col = "lightblue",
+  border = "white"
+)
 
-hist(sleep_quality_check$Age, xlab = "Age of the people involved in the analysis")
+hist(
+  sleep_quality_check$Heart.Rate, 
+  xlab = "Heart Rate",
+  main = "Distribution of Heart Rate",
+  col = "lightblue",
+  border = "white"
+)
 
-hist(sleep_quality_check$Sleep.Duration, xlab = "Sleep Duration per night")
+# Visualizing categorical variables
+plot(
+  sleep_quality_check$Sleep.Disorder, 
+  xlab = "Sleep Disorder",
+  main = "Sleep Disorders Distribution",
+  col = c("lightblue", "green", "brown")
+)
 
-hist(sleep_quality_check$Stress.Level, xlab = "Stress Level")
+plot(
+  sleep_quality_check$sleep_disorder_stress, 
+  xlab = "The level of stress",
+  main = "Stress Level Categories",
+  col = c("green", "orange", "red")
+)
 
-hist(sleep_quality_check$Quality.of.Sleep, xlab = "Quality of Sleep")
-
-hist(sleep_quality_check$Physical.Activity.Level, xlab = "Physical Activity Level")
-
-hist(sleep_quality_check$Heart.Rate, xlab = "Heart Rate")
-
-
-#the analysis of non numeric variables
-
-plot(sleep_quality_check$Sleep.Disorder, xlab = "Sleep Disorder",
-     col = c("lightblue", "green", "brown"))
-
-plot(sleep_quality_check$sleep_disorder_stress, xlab = "The level of stress",
-     col = c("green", "orange", "red"))
-
-#identify the outliers using boxplots
-boxplot(sleep_quality_check$Age, main = "boxplot Age",
-        xlab = "Age of the people involved")
+# Boxplots to identify outliers
+boxplot(
+  sleep_quality_check$Age, 
+  main = "Boxplot of Age",
+  xlab = "Age of the people involved",
+  col = "lightgreen"
+)
   
-boxplot(sleep_quality_check$Sleep.Duration, main = "boxplot Sleep Duration",
-        xlab = "Sleep Duration")
+boxplot(
+  sleep_quality_check$Sleep.Duration, 
+  main = "Boxplot of Sleep Duration",
+  xlab = "Sleep Duration",
+  col = "lightgreen"
+)
 
-boxplot(sleep_quality_check$Stress.Level, main = "boxplot Stress Level",
-        xlab = "Stress Level")
+boxplot(
+  sleep_quality_check$Stress.Level, 
+  main = "Boxplot of Stress Level",
+  xlab = "Stress Level",
+  col = "lightgreen"
+)
 
-boxplot(sleep_quality_check$Quality.of.Sleep, main = "boxplot Quality of Sleep",
-        xlab = "Quality of Sleep")
+boxplot(
+  sleep_quality_check$Quality.of.Sleep, 
+  main = "Boxplot of Quality of Sleep",
+  xlab = "Quality of Sleep",
+  col = "lightgreen"
+)
 
-boxplot(sleep_quality_check$Physical.Activity.Level, main = "boxplot Physical Activity Level",
-        xlab = "Physical Activity Level")
+boxplot(
+  sleep_quality_check$Physical.Activity.Level, 
+  main = "Boxplot of Physical Activity Level",
+  xlab = "Physical Activity Level",
+  col = "lightgreen"
+)
 
-boxplot(sleep_quality_check$Heart.Rate, main = "boxplot Heart Rate",
-        xlab = "Heart Rate")
+boxplot(
+  sleep_quality_check$Heart.Rate, 
+  main = "Boxplot of Heart Rate",
+  xlab = "Heart Rate",
+  col = "lightgreen"
+)
 
-#3
-rm(tabelarea_datelor)
-
-tabelarea_datelor <- table(sleep_quality_check$Sleep.Disorder,
-                           sleep_quality_check$sleep_disorder_stress)
+#------------------------------------------------------------------------------
+# Cross-tabulation Analysis
+#------------------------------------------------------------------------------
+# Create a cross-tabulation table
+tabelarea_datelor <- table(
+  sleep_quality_check$Sleep.Disorder,
+  sleep_quality_check$sleep_disorder_stress
+)
 tabelarea_datelor
 
-
+# Calculate relative frequencies
 prop.table(tabelarea_datelor)
 
-prop.table(tabelarea_datelor,1)
+# Row-conditional relative frequencies
+prop.table(tabelarea_datelor, 1)
 
-prop.table(tabelarea_datelor,2)
+# Column-conditional relative frequencies
+prop.table(tabelarea_datelor, 2)
 
+# Marginal frequencies
 addmargins(prop.table(tabelarea_datelor))
 
-#3.2
-
+# Summary of the table
 summary(tabelarea_datelor)
 
-#3.3
-#realized a Chi Square test
+#------------------------------------------------------------------------------
+# Chi-Square Tests
+#------------------------------------------------------------------------------
+# Chi-square test for sleep_disorder_stress distribution
 chisq.test(table(sleep_quality_check$sleep_disorder_stress))
 
-chisq.test(table(sleep_quality_check$sleep_disorder_stress), 
-           p = c(0.1, 0.3, 0.6))
+# Chi-square test with specified theoretical distribution
+chisq.test(
+  table(sleep_quality_check$sleep_disorder_stress), 
+  p = c(0.1, 0.3, 0.6)
+)
 
-
+# Chi-square test for Sleep.Disorder distribution
 chisq.test(table(sleep_quality_check$Sleep.Disorder))
 
+# Chi-square test with specified theoretical distribution
+chisq.test(
+  table(sleep_quality_check$Sleep.Disorder), 
+  p = c(0.1, 0.2, 0.7)
+)
 
-chisq.test(table(sleep_quality_check$Sleep.Disorder), 
-           p = c(0.1, 0.2, 0.7))
-
-#4.1 
-#covariance
+#------------------------------------------------------------------------------
+# Correlation Analysis
+#------------------------------------------------------------------------------
+# Covariance matrix
 cov(data_sep_num)
 
+# Pearson correlation matrix
 cor(data_sep_num)
 
+# Spearman correlation matrix
 cor(data_sep_num, method = 'spearman')
 
-#covariance test
+# Correlation tests for Stress Level with other variables
 cor.test(sleep_quality_check$Stress.Level, sleep_quality_check$Age)
-
 cor.test(sleep_quality_check$Stress.Level, sleep_quality_check$Sleep.Duration)
-
 cor.test(sleep_quality_check$Stress.Level, sleep_quality_check$Quality.of.Sleep)
-
 cor.test(sleep_quality_check$Stress.Level, sleep_quality_check$Physical.Activity.Level)
-
 cor.test(sleep_quality_check$Stress.Level, sleep_quality_check$Heart.Rate)
 
-#4.2
-rm(regresie_lin_simpla)
-rm(regresie_lin_multipla)
-
-#the model for the simple linear regression
-
-regresie_lin_simpla <- lm(Stress.Level~Quality.of.Sleep, sleep_quality_check)
-regresie_lin_simpla
+#------------------------------------------------------------------------------
+# Regression Analysis
+#------------------------------------------------------------------------------
+# Simple linear regression model
+regresie_lin_simpla <- lm(Stress.Level ~ Quality.of.Sleep, sleep_quality_check)
 summary(regresie_lin_simpla)
 
-regresie_lin_multipla <- lm(Stress.Level~Quality.of.Sleep+Age, sleep_quality_check)
-regresie_lin_multipla
+# Multiple linear regression model
+regresie_lin_multipla <- lm(Stress.Level ~ Quality.of.Sleep + Age, sleep_quality_check)
 summary(regresie_lin_multipla)
 
-#4.2.2
-
-#the model for the non-linear regression
-
-rm(regresie_neliniara)
-
-regresie_neliniara <- lm(Stress.Level~Quality.of.Sleep+I(Quality.of.Sleep^2), sleep_quality_check)
-
-regresie_neliniara
-
+# Non-linear regression model (quadratic model)
+regresie_neliniara <- lm(
+  Stress.Level ~ Quality.of.Sleep + I(Quality.of.Sleep^2), 
+  sleep_quality_check
+)
 summary(regresie_neliniara)
 
-#4.2.3
-# Conducted ANOVA test between two regression models
+# Compare regression models using ANOVA
 anova(regresie_lin_simpla, regresie_lin_multipla)
 
-#5.1
-#mean test of the variable Stress Level vs a set value 0 or 5
+#------------------------------------------------------------------------------
+# Hypothesis Testing
+#------------------------------------------------------------------------------
+# One-sample t-test (comparing Stress.Level to a fixed value)
 t.test(sleep_quality_check$Stress.Level, mu = 0)
-#5.2.1
-t.test(sleep_quality_check$Stress.Level, mu = 5, alternative = "greater")
 
-levels(sleep_quality_check$sleep_disorder_stress)
+# One-sided t-test
+t.test(
+  sleep_quality_check$Stress.Level, 
+  mu = 5, 
+  alternative = "greater"
+)
 
-#5.2.2
-#bartlett.test(Stress.Level~sleep_disorder_stress, sleep_quality_check,
-              #Sleep.Disorder %in% c("Moderate", "High"))
+# Test for equal variances between Sleep Disorder groups
+bartlett.test(
+  Stress.Level ~ Sleep.Disorder, 
+  sleep_quality_check,
+  Sleep.Disorder %in% c("Insomnia", "Sleep Apnea")
+)
 
+# Create subset for Sleep Disorder comparison
+subset_sleep_quality_check <- sleep_quality_check[
+  sleep_quality_check$Sleep.Disorder %in% c("Insomnia", "Sleep Apnea"), 
+]
 
-bartlett.test(Stress.Level~Sleep.Disorder, sleep_quality_check,
-              Sleep.Disorder %in% c("Insomnia", "Sleep Apnea"))
+# Two-sample t-test comparing Stress.Level between Sleep Disorder groups
+t.test(Stress.Level ~ Sleep.Disorder, subset_sleep_quality_check)
 
-subset_sleep_quality_check <- sleep_quality_check[sleep_quality_check$Sleep.Disorder %in%
-                                                    c("Insomnia", "Sleep Apnea"), ]
-
-t.test(Stress.Level~Sleep.Disorder, subset_sleep_quality_check)
-
-#5.2.3
-
-objectaov <- aov(Stress.Level~sleep_disorder_stress, sleep_quality_check)
+# ANOVA test for Stress.Level across sleep_disorder_stress groups
+objectaov <- aov(Stress.Level ~ sleep_disorder_stress, sleep_quality_check)
 anova(objectaov)
 coef(objectaov)
